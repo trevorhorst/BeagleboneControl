@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>ssl/certs/sslserver-crt.pem</file>
+        <file>ssl/certs/sslserver-key.pem</file>
+        <file>default_alt/assets/bundle.js</file>
+        <file>default_alt/assets/index.html</file>
+        <file>default_alt/assets/stylesheet.css</file>
+        <file>ssl/ca-crt.pem</file>
+    </qresource>
+</RCC>

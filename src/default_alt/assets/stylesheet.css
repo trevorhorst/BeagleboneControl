@@ -1,0 +1,49 @@
+body {
+	margin: 0;
+	height: 100%;
+	width: 100%;
+	background-color: whitesmoke;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-font-smoothing: antialiased;
+	font-family: "Roboto";
+}
+
+/* Turn off links changing blue and purple */
+a {
+	color:inherit;
+	text-decoration: none;
+}
+
+/* Spectral Graph Styles */
+/*font: 10px sans-serif; */
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+}
+
+.line {
+	fill: none;
+	stroke-width: 2px;
+}
+
+
+.tick text {
+	font-size: 12px;
+	stroke: black;
+}
+
+.tick line {
+	opacity: 0.2;
+}
+
+
+.axisLabel {
+	stroke: black;
+}
+
+.decbar {
+	fill: none;
+	stroke-width: 2px;
+	stroke: black;
+}

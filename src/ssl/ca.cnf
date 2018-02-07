@@ -1,0 +1,25 @@
+[ ca ]
+default_ca = CA_default
+
+[ req ]
+default_bits = 4096
+days = 9999
+distinguished_name = req_distinguished_name
+attributes = req_attributes
+prompt = no
+output_password = radio
+
+[ req_distinguished_name ]
+C = US 
+ST = MD
+L = MA
+O = G3
+OU = NDR568
+CN = localhost
+
+# We won't use this section but it must exist
+[ req_attributes ]
+#challengePassword              = A challenge password
+#challengePassword_min          = 4
+#challengePassword_max          = 20
+#unstructuredName               = An optional company name
