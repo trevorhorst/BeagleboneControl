@@ -82,7 +82,6 @@ int main(int argc, char *argv[])
     // Initialize scripting
     Script script;
     script.AddGlobal( "server", server );
-    // script.AddGlobal( "client", client );
 
     // Initialize debugging
     Debug debug;
