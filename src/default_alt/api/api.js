@@ -44,7 +44,7 @@ function doFilePost(route, payload) {
 }
 
 module.exports.sendFile = function(fileList) {
-	doFilePost('http://localhost:3000/upload', fileList)
+	doFilePost('http://localhost:8888/upload', fileList)
 }
 
 

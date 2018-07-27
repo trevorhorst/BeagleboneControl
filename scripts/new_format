@@ -1,0 +1,233 @@
+#!/bin/bash
+# KEEP THIS IN NDR354 SCRIPTS FOLDER
+
+DEVICE='/dev/sdb'
+IMAGES_DIR="../images/"
+IMAGES_MLO=$IMAGES_DIR"MLO"
+IMAGES_UBT=$IMAGES_DIR"u-boot.img"
+IMAGES_VML=$IMAGES_DIR"zImage"
+IMAGES_DTB=$IMAGES_DIR"am335x-boneblack.dtb"
+# IMAGES_DTB=$IMAGES_DIR"ndr561.dtb"
+IMAGES_URD=$IMAGES_DIR"rootfs.cpio.uboot"
+IMAGES_UENV="./uEnv.txt"
+IMAGES_RFS=$IMAGES_DIR"rootfs.tar"
+PARTITION_NAME="boot"
+MOUNT_DIR="/mnt"
+
+declare -a IMAGES_ARRAY=( 
+    $IMAGES_MLO 
+    $IMAGES_UBT
+    $IMAGES_VML 
+    $IMAGES_DTB 
+    $IMAGES_URD
+    $IMAGES_UENV
+     )
+
+# Verify Device ################################################################
+verifydevice() {
+    # Verify that this is the device the user wants to overwrite.
+    while true; do
+        
+        # Print a list of available devices to the user
+        echo "******************************"
+        echo "AVAILABLE DEVICES: "
+        lsblk -l -d -n
+        echo "******************************"
+
+        echo "Which device would you like to write? "
+        read path
+
+        DEVICE='/dev/'$path
+
+        # Check that the device is actually available
+        lsblk -l -d -n | grep "$path"
+        if [ $? -ne 0 ]; then
+            echo "Device does not appear to be available, continue? (y/n):"
+            read ans
+
+            case $ans in
+                "y" | "yes")
+                    ;;
+                "n" | "no")
+                    echo "Exitting Script..."
+                    exit 1
+                    ;;
+                *)
+                    echo "Invalid Input"
+                    continue
+                    ;;
+            esac
+        fi
+
+        # Verify that the user wants to write the selected device
+        if [ -e $DEVICE ]; then
+            echo "$DEVICE Found"
+
+            echo "$DEVICE will be mounted to $MOUNT_DIR"
+            echo "Would you like to write $DEVICE?"
+            echo -n "(y/n):"
+            read ans
+
+            case $ans in
+                "y" | "yes")
+                    break
+                    ;;
+                "n" | "no")
+                    echo "Exitting Script..."
+                    exit
+                    ;;
+                *)
+                    echo "Invalid Input"
+                    continue
+                    ;;
+            esac
+        else
+            echo "$DEVICE Not Found"
+        fi
+
+    done
+
+    # If the device is an MMC, we need to add the 'p' for a partition
+    part_mod=''
+    if [ "$DEVICE" == "/dev/mmcblk0" ]; then
+        part_mod='p'
+    fi
+}
+
+# Unmount Partitions ###########################################################
+unmountpart() {
+    echo "Unmounting All Partitions On Device..."
+    for n in $DEVICE"$part_mod"?; do
+        if umount -l $n; then
+            echo "$n Unmounted"
+        else
+            echo "Could Not Unmount $n"
+        fi
+    done
+}
+
+# Write to Device ##############################################################
+writedevice() {
+
+    # Write 64 blocks in 512 byte increments
+    echo "Writing to $DEVICE..."
+    dd if=/dev/zero of=$DEVICE bs=512 count=64
+
+    # Creating a new boot partition on the device..
+    echo "Creating partition on $DEVICE..."
+    ( echo n;	    # Create new partition
+    echo p;		    # Make the partition primary
+    echo 1;		    # Select Partition 1
+    echo -ne '\n';	# Start sector
+    echo +128M;     # 256MB
+    echo t;		    # File Type
+    echo c;         # W95 FAT32 (LBA)
+    echo a;		    # Mark as bootable
+    echo 1;		    # Select partition 1
+    echo n;         # Create new partition
+    echo p;         # Make the partition primary
+    echo 2;         # Select partition 2
+    echo -ne '\n';  # Select default start sector
+    echo +512M;    # Select default end sector
+    echo t;         # File Type
+    echo 2;         # Select partition 2
+    echo 83;        # Linux ( Will format as ext4 ) 
+    echo w;		    # Write partition
+    echo q;		    # Quit
+    ) | fdisk $DEVICE # Pipe to fdisk
+
+    # echo 83;      # Linux ( Will format as ext3 )
+    # echo c;		# W95 FAT32 (LBA)
+
+    # Format the partition as FAT32 with provided partition name
+    echo "Formatting partition as FAT32 with name \"$PARTITION_NAME\""
+    mkfs.vfat $DEVICE"$part_mod"1 -F 32 -n "$PARTITION_NAME"
+
+    # Form the partition as EXT4 with provided partition name
+    echo "Formatting partition as EXT4 with name \"storage\""
+    mkfs.ext4 -L "rootfs" -E nodiscard $DEVICE"$part_mod"2
+}
+
+writemedia() {
+
+    if [ "$#" -lt 1 ]; then
+        echo "writemedia: not enough arguments"
+        exit
+    fi
+
+    mount_part=$1
+
+    # Mount the partition
+    # mkdir $MOUNT_DIR
+    echo "Mounting first partition to $MOUNT_DIR"
+    mount $mount_part $MOUNT_DIR
+
+    # Copy items over to the card
+    for n in "${media_array[@]}"; do
+        if [ -f $n ]; then
+            echo "Copying File $n"
+            cp $n $MOUNT_DIR
+        elif [ -d $n ]; then
+            echo "Copying Folder $n"
+            cp -Lr $n $MOUNT_DIR
+        else 
+            echo "$n Does Not Exist. Stopping Script."
+            exit
+        fi
+    done
+
+    echo "Syncing..."
+    if sync ; then
+        echo "Sync Successful"
+    else 
+        echo "Sync Failed. Halting Script"
+        exit
+    fi
+
+    echo "Unmounting first partition..."
+    umount $MOUNT_DIR
+}
+
+writerootfs(){
+
+    if [ "$#" -lt 1 ]; then
+        echo "writemedia: not enough arguments"
+        exit
+    fi
+
+    mount_part=$1
+
+    echo "Mounting second partition to $MOUNT_DIR"
+    mount $mount_part $MOUNT_DIR
+
+    tar -C $MOUNT_DIR -xf $rootfs_tar
+
+    echo "Syncing..."
+    if sync ; then
+        echo "Sync Successful"
+    else 
+        echo "Sync Failed. Halting Script"
+        exit
+    fi
+
+    echo "Unmounting first partition..."
+    umount $MOUNT_DIR
+}
+
+# Main script calls
+verifydevice
+unmountpart
+writedevice
+
+# Copy media to the boot partition
+media_array=("${IMAGES_ARRAY[@]}")
+writemedia $DEVICE"$part_mod"1
+
+# Extract rootfs to the rootfs partition
+rootfs_tar=$IMAGES_RFS
+writerootfs $DEVICE"$part_mod"2
+
+echo "SD Card Should Be Ready To Boot."
+exit
+
+

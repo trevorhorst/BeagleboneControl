@@ -30,96 +30,89 @@ using namespace std;
 
 bool SSD1306::mVerbose = false;
 
-/************************************************************
- * Constructor
- ***********************************************************/
+/** ****************************************************************************
+ * @brief Constructor
+ * ****************************************************************************/
 SSD1306::SSD1306()
     : QObject( NULL )
-    , screenBuf_(0), data_(0), tmp_(0), i2c_(0)
+    , mScreenBuffer( nullptr )
+    , mData( nullptr )
+    , tmp_( nullptr )
+    , mI2C( nullptr )
 {
-   i2c_ = new I2C(0x3C, 0x00);
+   mI2C = new I2C( 0x3C, 0x00 );
    init ();
 }
 
-
-/************************************************************
- * Destructor
- ************************************************************/
+/** ****************************************************************************
+ * @brief Destructor
+ * ****************************************************************************/
 SSD1306::~SSD1306()
 {
-   if (screenBuf_)
-   {
-      delete [] screenBuf_;
-      screenBuf_ = 0;
-   }
-   if (i2c_)
-   {
-      delete i2c_;
-      i2c_ = 0;
-   }
-}
+    if( mScreenBuffer ) {
+        delete[] mScreenBuffer;
+        mScreenBuffer = 0;
+    }
 
-void SSD1306::InitScript( Script *script )
-{
-    script->AddGlobal( "ssd1306", this );
-    script->AddCommand( "write", "ssd1306.Write('%0')"
-                        , "Write text to the screen" );
+    if( mI2C ) {
+        delete mI2C;
+        mI2C = 0;
+    }
 }
 
 bool SSD1306::Write( QString text )
 {
     ClearScreen();
     WriteCenter( text, 4 );
-    writeScreen();
+    WriteScreen();
 }
 
-/************************************************************
- * Clears the screen memory buffer. This does not clear the
- * OLED. To clear the OLED, you need to write the data to the
- * device (call writeData())
- ************************************************************/
-void SSD1306::clearBuffer ()
+/** ****************************************************************************
+ * @brief Clears the SSD1306's internal memory buffer
+ * ****************************************************************************/
+void SSD1306::ClearBuffer ()
 {
-   if (screenBuf_)
-      memset (screenBuf_, 0x00, (WIDTH * HEIGHT));
+    if( mScreenBuffer ) {
+        memset( mScreenBuffer, 0x00, ( WIDTH * HEIGHT ) );
+    }
 }
 
-/************************************************************
- * Clears the OLED screen
- ************************************************************/
+/** ****************************************************************************
+ * @brief Clears the SSD1306's screen
+ * ****************************************************************************/
 void SSD1306::ClearScreen()
 {
-   clearBuffer(); // Clear internal buffer
-   writeScreen(); // Write cleared buffer to screen
+    // Clear internal buffer
+    ClearBuffer();
+    // Write cleared buffer to the screen
+    WriteScreen();
 }
 
-/************************************************************
- * Writes the screen buffer (screenBuf_) to the device
- *
- * Returns true if things were written successfully,
- * false otherwise.
- ************************************************************/
-bool SSD1306::writeScreen ()
+/** ****************************************************************************
+ * @brief Writes the screen buffer to the SSD1306
+ * @return Boolean indicating success of the operation
+ * ****************************************************************************/
+bool SSD1306::WriteScreen()
 {
-   bool fOK;
-   UINT16 uiIndex = 0x00;
-   UINT8 uchTemp[0x09];
+    bool fOK;
+    int16_t uiIndex = 0x00;
+    int8_t uchTemp[ 0x09 ];
 
-   // Need to set OLED screen pointer back to 0, 0 before writing
-   // This was the only way I found to do this with the chip set commands.
-   fOK = i2c_->writeCommand (3, 0x21, 0x00, 0x7F); // Set column address; start 0, end 127
-   fOK = i2c_->writeCommand (3, 0x22, 0x00, 0x07); // Set row address; start 0, end 7
+    // Need to set OLED screen pointer back to 0, 0 before writing
+    // This was the only way I found to do this with the chip set commands.
+    fOK = mI2C->writeCommand( 3, 0x21, 0x00, 0x7F ); // Set column address; start 0, end 127
+    fOK = mI2C->writeCommand( 3, 0x22, 0x00, 0x07 ); // Set row address; start 0, end 7
 
-   while (uiIndex < (WIDTH * HEIGHT))
-   {
-      uchTemp[0] = 0x40;           // Co = 0; D/C# = 1 for data
-      for (int i = 0; i < 8; i++)  // Copy 8 bytes to temp buffer
-         uchTemp[i+1] = screenBuf_[uiIndex+i];
-      fOK = i2c_->writeBytes (uchTemp, 0x09); //Write control byte with 8 data bytes
-      uiIndex += 0x08;             // Move to next Octet
-   }
+    while( uiIndex < ( WIDTH * HEIGHT ) ) {
+       uchTemp[ 0 ] = 0x40;           // Co = 0; D/C# = 1 for data
+       for( int i = 0; i < 8; i++ ) {  // Copy 8 bytes to temp buffer
+          uchTemp[ i + 1 ] = mScreenBuffer[ uiIndex + i ];
+       }
+       fOK = mI2C->writeBytes( uchTemp, 0x09 ); //Write control byte with 8 data bytes
+       uiIndex += 0x08;             // Move to next Octet
+    }
 
-   return fOK;
+    return fOK;
 }
 
 /************************************************************
@@ -151,10 +144,10 @@ bool SSD1306::WriteCenter( QString text, uint8_t row )
  *
  * Returns false if the row/column is out of range; returns true otherwise
  ************************************************************/
-bool SSD1306::writeText (string text, UINT8 row, UINT8 col) //
+bool SSD1306::writeText (string text, int8_t row, int8_t col) //
 {
-   UINT8 uchI, uchJ;
-   UINT16 uiIndex;     // Indexes in the screen buffer
+   int8_t uchI, uchJ;
+   int16_t uiIndex;     // Indexes in the screen buffer
 
    uiIndex = (row * WIDTH) + col;             // Set absolute start position in buffer
 
@@ -165,10 +158,10 @@ bool SSD1306::writeText (string text, UINT8 row, UINT8 col) //
    {
       for (uchJ = 0; uchJ < 5; uchJ++)             // Loop through each 7bit segment of the character
       {
-         screenBuf_[uiIndex] = font[(text[uchI]*5)+uchJ]; // Trial and error!
+         mScreenBuffer[uiIndex] = font[(text[uchI]*5)+uchJ]; // Trial and error!
          uiIndex ++;                              // Move to next buffer position
       }
-      screenBuf_[uiIndex] = 0x00;                  // This puts a space between the characters on screen
+      mScreenBuffer[uiIndex] = 0x00;                  // This puts a space between the characters on screen
       uiIndex++;
    }
    return true;
@@ -183,9 +176,9 @@ bool SSD1306::init ()
 {
    bool retval = false;
 
-   screenBuf_ = new UINT8[WIDTH * HEIGHT]; // Create a block of memory for the screen buffer
-   memset(screenBuf_, 0, (WIDTH * HEIGHT));
-   if (!screenBuf_)
+   mScreenBuffer = new int8_t[WIDTH * HEIGHT]; // Create a block of memory for the screen buffer
+   memset(mScreenBuffer, 0, (WIDTH * HEIGHT));
+   if (!mScreenBuffer)
    {
 #ifdef DEBUG
       cerr << "could not create screenBuf buffer" << endl;
@@ -193,16 +186,16 @@ bool SSD1306::init ()
       return retval;
    }
 
-   data_ = new UINT8[TILE_SIZE];
-   memset(data_, 0, TILE_SIZE);
-   if (!data_)
+   mData = new int8_t[TILE_SIZE];
+   memset(mData, 0, TILE_SIZE);
+   if (!mData)
    {
 #ifdef DEBUG
       cerr << "could not create data buffer" << endl;
 #endif
    }
 
-   tmp_ = new UINT8[TILE_SIZE];
+   tmp_ = new int8_t[TILE_SIZE];
    memset(tmp_, 0, TILE_SIZE);
    if (!tmp_)
    {
@@ -211,7 +204,7 @@ bool SSD1306::init ()
 #endif
    }
 
-   memcpy( screenBuf_, hi_logo, sizeof( hi_logo ) );
+   memcpy( mScreenBuffer, hi_logo, sizeof( hi_logo ) );
 
    //write command to the screen registers.
    // retval &= i2c_->writeCommand(1,0xAE);//display off
@@ -242,35 +235,35 @@ bool SSD1306::init ()
    // retval &= i2c_->writeCommand(1,0xAF);//--turn on oled panel
 
 
-   retval &= i2c_->writeCommand (1, 0xAE);             // Display off
-   retval &= i2c_->writeCommand (2, 0xD5, 0x80);       // set display clock division
-   retval &= i2c_->writeCommand (2, 0xA8, 0x3F);       // set multiplex
-   retval &= i2c_->writeCommand (2, 0xD3, 0x00);       // set display offset
-   retval &= i2c_->writeCommand (1, 0x40);             // set start line #0
-   retval &= i2c_->writeCommand (2, 0x8D, 0x14);       // set charge pump
-   retval &= i2c_->writeCommand (2, 0x20, 0x00);       // Memory mode
-   retval &= i2c_->writeCommand (1, 0xA1);             // Segremap(0xA0 = reset, 0xA1 = 127 = SEG0)
-   retval &= i2c_->writeCommand (1, 0xC8);             // Com scan dec (0xC0 = reset normal, 0xC8 = scan  from Com[n-1] - Com 0
-   retval &= i2c_->writeCommand (2, 0xDA, 0x12);       // Set com pins
-   retval &= i2c_->writeCommand (2, 0x81, 0xCF);       // Set contrast
-   retval &= i2c_->writeCommand (2, 0xD9, 0xF1);       // Set precharge
-   retval &= i2c_->writeCommand (2, 0xDB, 0x40);       // Set Vcom select
-   retval &= i2c_->writeCommand (1, 0xA4);             // Resume RAM content display
-   retval &= i2c_->writeCommand (1, 0xA6);             // Normal display not inverted
-   retval &= i2c_->writeCommand (1, 0x00);             // low col=0
-   retval &= i2c_->writeCommand (1, 0x10);             // high col=0
-   retval &= i2c_->writeCommand (1, 0x40);             // line #0
-   retval &= i2c_->writeCommand (1, 0xAF);             // Display ON
-   retval &= i2c_->writeCommand (3, 0x21, 0x00, 0x7F); // Set column address; start 0, end 127
-   retval &= i2c_->writeCommand (3, 0x22, 0x00, 0x07); // Set row address; start 0, end 7
-   retval &= i2c_->writeCommand (1, 0xAF);             // Display ON
+   retval &= mI2C->writeCommand( 1, 0xAE );             // Display off
+   retval &= mI2C->writeCommand( 2, 0xD5, 0x80 );       // set display clock division
+   retval &= mI2C->writeCommand( 2, 0xA8, 0x3F );       // set multiplex
+   retval &= mI2C->writeCommand( 2, 0xD3, 0x00 );       // set display offset
+   retval &= mI2C->writeCommand( 1, 0x40 );             // set start line #0
+   retval &= mI2C->writeCommand( 2, 0x8D, 0x14 );       // set charge pump
+   retval &= mI2C->writeCommand( 2, 0x20, 0x00 );       // Memory mode
+   retval &= mI2C->writeCommand( 1, 0xA1 );             // Segremap(0xA0 = reset, 0xA1 = 127 = SEG0)
+   retval &= mI2C->writeCommand( 1, 0xC8 );             // Com scan dec (0xC0 = reset normal, 0xC8 = scan  from Com[n-1] - Com 0
+   retval &= mI2C->writeCommand( 2, 0xDA, 0x12 );       // Set com pins
+   retval &= mI2C->writeCommand( 2, 0x81, 0xCF );       // Set contrast
+   retval &= mI2C->writeCommand( 2, 0xD9, 0xF1 );       // Set precharge
+   retval &= mI2C->writeCommand( 2, 0xDB, 0x40 );       // Set Vcom select
+   retval &= mI2C->writeCommand( 1, 0xA4 );             // Resume RAM content display
+   retval &= mI2C->writeCommand( 1, 0xA6 );             // Normal display not inverted
+   retval &= mI2C->writeCommand( 1, 0x00 );             // low col=0
+   retval &= mI2C->writeCommand( 1, 0x10 );             // high col=0
+   retval &= mI2C->writeCommand( 1, 0x40 );             // line #0
+   retval &= mI2C->writeCommand( 1, 0xAF );             // Display ON
+   retval &= mI2C->writeCommand( 3, 0x21, 0x00, 0x7F ); // Set column address; start 0, end 127
+   retval &= mI2C->writeCommand( 3, 0x22, 0x00, 0x07 ); // Set row address; start 0, end 7
+   retval &= mI2C->writeCommand( 1, 0xAF );             // Display ON
 
-   i2c_->writeCommand (3, 0x21, 0x00, 0x7F); // Set column address; start 0, end 127
-   i2c_->writeCommand (3, 0x22, 0x00, 0x07); // Set row address; start 0, end 7
+   mI2C->writeCommand (3, 0x21, 0x00, 0x7F); // Set column address; start 0, end 127
+   mI2C->writeCommand (3, 0x22, 0x00, 0x07); // Set row address; start 0, end 7
 
    ClearScreen();
-   // UINT16 uiIndex = 0x00;
-   // UINT8 uchTemp[0x09];
+   // int16_t uiIndex = 0x00;
+   // int8_t uchTemp[0x09];
 
    // while (uiIndex < (1024))
    // {
@@ -296,7 +289,7 @@ bool SSD1306::init ()
  *
  * Returns false
  ************************************************************/
-bool SSD1306::writeImage (UINT8* image)
+bool SSD1306::writeImage (int8_t* image)
 {
    for (int lcv=0; lcv<(WIDTH * HEIGHT); lcv++)
    {
@@ -333,7 +326,7 @@ bool SSD1306::writeImage (UINT8* image)
  *
  * Returns the byte with the bits reversed
  ************************************************************/
-UINT8 SSD1306::reverseByte (UINT8 b)
+int8_t SSD1306::reverseByte (int8_t b)
 {
    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
@@ -352,7 +345,7 @@ void SSD1306::getTileFromBitmap (int index)
    int step = 0;
    for (int i=0; i<TILE_SIZE; i++, step+=STEP_SIZE)
    {
-      data_[i] = screenBuf_[index+step];
+      mData[i] = mScreenBuffer[index+step];
 #if DEBUG
       cout << "getting byte at index: " << dec << index+step << " with value: "
          << hex << uppercase << "0x" << (int)screenBuf_[index+step] << endl;
@@ -371,7 +364,7 @@ void SSD1306::setTileInBuffer(int index)
    int step = 0;
    for (int i=0; i<TILE_SIZE; i++, step+=STEP_SIZE)
    {
-      screenBuf_[index+step] |= tmp_[i];
+      mScreenBuffer[index+step] |= tmp_[i];
 #ifdef DEBUG
       cout << "setting byte at index: " << dec << index+step << " with value: "
          << hex << uppercase << "0x" << (int)tmp_[i] << endl;
@@ -396,15 +389,15 @@ void SSD1306::rotateTile()
       for (int j=0; j<TILE_SIZE; j++)
       {
 #ifdef DEBUG
-         cout << " anding data 0x" << hex << uppercase << (int)data_[j]
+         cout << " anding data 0x" << hex << uppercase << (int)mData[j]
             << " with 2 to the " << 7-i << endl;
 #endif
-         UINT8 temp = data_[j] & (UINT8)pow(2, 7-i);
+         int8_t temp = mData[j] & (int8_t)pow(2, 7-i);
 #ifdef DEBUG
          cout << "\ttemp before shift: " << hex << uppercase << "0x" << (int)temp << endl;
 #endif
          int shift = 7-i-j;
-         UINT8 shifted = 0x0;
+         int8_t shifted = 0x0;
          if (shift < 0)
          {
             shift *= -1;

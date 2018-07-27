@@ -17,10 +17,16 @@ public:
     void SetUrl( QString url );
 
     MHD_Connection *mConnection;
+    MHD_PostProcessor *mPostProcessor;
     QHash< const char*, const char *> mHeaders;
     QString mMethod;
     QString mUrl;
     QString mBody;
+    const char* mData;
+    uint32_t mDataSize;
+    FILE* mFp;
+
+    const char* GetBody();
 signals:
     void Finished();
 

@@ -1,0 +1,8 @@
+bootdir=
+bootpart=0:1
+loadimage=load mmc ${bootpart} ${loadaddr} /zImage
+loadramdisk=load mmc ${bootpart} ${rdaddr} /rootfs.cpio.uboot
+loadfdt=load mmc ${bootpart} ${fdtaddr} /am335x-boneblack.dtb
+#uenvcmd=run loadimage;run loadramdisk;run findfdt;run loadfdt;run args_mmc;bootz ${loadaddr} ${rdaddr} ${fdtaddr}
+args_mmc=setenv bootargs console=${console} ${optargs} root=/dev/mmcblk0p2 rw rootfstype=${mmcrootfstype}
+uenvcmd=run loadimage;run loadramdisk;run findfdt;run loadfdt;run mmcloados

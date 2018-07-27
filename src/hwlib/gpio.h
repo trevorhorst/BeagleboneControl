@@ -22,13 +22,14 @@ class GPIO : public QObject
 {
     Q_OBJECT
 public:
-    explicit GPIO(QObject *parent = 0);
+    explicit GPIO( QObject *parent = 0 );
     ~GPIO();
     static bool mVerbose;
     static bool IsVerbose(){ return mVerbose; }
     static void SetVerbose( bool verbose ) { mVerbose = verbose; }
+
     void Init(int fd, bool simulated);
-    void InitScript( Script *script );
+
     enum RegisterID {
         REVISION=0,
         SYSCONFIG,
@@ -84,7 +85,7 @@ protected:
     RegisterList regs[GPIO_BANKS];
     volatile uint32_t *mem[GPIO_BANKS];
     size_t len;
-    bool simulated;
+    bool mSimulated;
 };
 
 #endif // GPIO_H

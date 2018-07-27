@@ -39,16 +39,15 @@ public:
     static void SetVerbose( bool verbose ){ mVerbose = verbose; }
 
 public slots:
-    void Help();
+    bool Help();
 
 private:
-    QScriptEngine mScriptEngine;
+    static bool mVerbose;
 
+    QScriptEngine mScriptEngine;
     QString ProcessInput( const QString &str );
     QString ReplaceArguments(const QString &cmd , QStringList args);
     QMap< QString, Command* > mCommandList;
-    static bool mVerbose;
-
 };
 
 #endif // SCRIPT_H

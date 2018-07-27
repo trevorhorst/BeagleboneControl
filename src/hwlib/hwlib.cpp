@@ -1,7 +1,10 @@
 #include "hwlib.h"
 
+bool HwLib::mVerbose = false;
+
 HwLib::HwLib( QObject *parent )
     : QObject( parent )
+
     //, mGps( "/dev/ttyO1", QSerialPort::Baud9600 )
 {
     // Map the main memory
@@ -12,7 +15,26 @@ HwLib::HwLib( QObject *parent )
         exit( -1 );
     }
 
+    // Initialize the GPIO module
     mGpio.Init( mFd, false );
+
+    // Initialize the clock module
+    mClockModule.Init( mFd, false );
+
+    // Initialize the LEDs
+    mLeds.push_back( new Led( 1, 21 ) );
+    mLeds.push_back( new Led( 1, 22 ) );
+    mLeds.push_back( new Led( 1, 23 ) );
+    mLeds.push_back( new Led( 1, 24 ) );
+
+    // Write to the screen
+    mOled.WriteCenter( "Hello World", 5 );
+    mOled.WriteScreen();
+
+
+    for( size_t i = 0; i < mLeds.size(); i++ ) {
+        mLeds.at( i )->Init( &mGpio );
+    }
 
     mHeartbeat.setInterval( 1000 );
     mHeartbeat.connect( &mHeartbeat, SIGNAL( timeout() )
@@ -32,18 +54,6 @@ HwLib::~HwLib()
                         , this, SLOT( Heartbeat() ) );
 }
 
-void HwLib::InitScript( Script *script )
-{
-    script->AddGlobal( "hwlib", this );
-    script->AddCommand( "heartbeat", "hwlib.ToggleHeart()"
-                        , "Toggle the heartbeat");
-
-    mGpio.InitScript( script );
-    mGps.InitScript( script );
-    mOled.InitScript( script );
-    // mSerial.InitScript( script );
-}
-
 void HwLib::ToggleHeart()
 {
     if( mHeartbeat.isActive() ) {
@@ -55,34 +65,45 @@ void HwLib::ToggleHeart()
     }
 }
 
-void HwLib::InitDebug( Debug *debug )
-{
-    debug->Add( "gpio", &GPIO::IsVerbose, &GPIO::SetVerbose );
-    debug->Add( "gps", &Venus634LPx::IsVerbose, &Venus634LPx::SetVerbose );
-    debug->Add( "oled", &SSD1306::IsVerbose, &SSD1306::SetVerbose );
-}
-
 void HwLib::Heartbeat()
 {
-    QGeoPositionInfo loc = mGps.GetLocation();
-    QString date = QString( "%0" ).arg(
-                loc.timestamp().date().toString() );
-    QString time = QString( "%0" ).arg(
-                loc.timestamp().time().toString() );
-    QString lon = QString( "%0" ).arg(
-                loc.coordinate().longitude() );
-    QString lat = QString( "%0" ).arg(
-                loc.coordinate().latitude() );
+    // QGeoPositionInfo loc = mGps.GetLocation();
+    // QString date = QString( "%0" ).arg(
+    //             loc.timestamp().date().toString() );
+    // QString time = QString( "%0" ).arg(
+    //             loc.timestamp().time().toString() );
+    // QString lon = QString( "%0" ).arg(
+    //             loc.coordinate().longitude() );
+    // QString lat = QString( "%0" ).arg(
+    //             loc.coordinate().latitude() );
 
-    mOled.WriteCenter( date, 0 );
-    mOled.WriteCenter( time, 1 );
+    // mOled.WriteCenter( date, 0 );
+    // mOled.WriteCenter( time, 1 );
 
-    mOled.WriteCenter( "Latitude:", 3 );
-    mOled.WriteCenter( lat, 4 );
+    // mOled.WriteCenter( "Latitude:", 3 );
+    // mOled.WriteCenter( lat, 4 );
 
-    mOled.WriteCenter( "Longitude:", 6 );
-    mOled.WriteCenter( lon, 7 );
+    // mOled.WriteCenter( "Longitude:", 6 );
+    // mOled.WriteCenter( lon, 7 );
 
-    mOled.writeScreen();
+    // mOled.writeScreen();
 
+}
+
+GPIO* HwLib::GetGpio()
+{
+    return &mGpio;
+}
+
+ClockModule* HwLib::GetClockModule()
+{
+    return &mClockModule;
+}
+
+Led* HwLib::GetLed( uint32_t led )
+{
+    if( led <= mLeds.size() ) {
+        return mLeds.at( led );
+    }
+    return nullptr;
 }

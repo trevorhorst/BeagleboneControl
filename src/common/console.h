@@ -26,12 +26,11 @@ public slots:
     void Start();
     void Run();
     void Exit();
-    void Help();
     void Test(){ qDebug("Test"); }
 
 private:
-    QThread mThread;
     Script *mScript;
+    QThread mThread;
 
     bool mDone;
 };

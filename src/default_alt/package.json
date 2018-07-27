@@ -12,7 +12,7 @@
     "babel-polyfill": "^6.23.0",
     "d3": "3.5.16",
     "material-ui": "^0.16.6",
-    "react": "^15.4.1",
+    "react": "^15.6.2",
     "react-dom": "^15.4.1",
     "react-dropzone": "^3.13.2",
     "react-router": "^3.0.0",

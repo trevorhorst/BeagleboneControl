@@ -37,76 +37,79 @@ GPIO::GPIO(QObject *parent) :
 
 GPIO::~GPIO()
 {
-    for (int i=0;i<GPIO_BANKS;i++) {
-        if (mem[i   ]) {
-            if (simulated)
-                free((void*)mem[i]);
+    for( int i = 0; i < GPIO_BANKS; i++ ) {
+        if( mem[ i ] ) {
+            if( mSimulated )
+                free( (void*)mem[ i ] );
             else
-                munmap((void*)mem[i],len);
+                munmap( (void*)mem[ i ], len );
         }
     }
 }
 
-void GPIO::Init(int fd,bool simulated)
+void GPIO::Init( int fd, bool simulated )
 {
-    this->simulated=simulated;
-    for (int i=0;i<GPIO_BANKS;i++) {
-        assert(mem[i]==NULL);
+    mSimulated = simulated;
+    for( int i = 0; i < GPIO_BANKS; i++ ) {
+        assert( mem[ i ] == NULL );
         unsigned int addr;
-        if (i==0)
-            addr=GPIO0_BASE_ADDR;
-        else if (i==1)
-            addr=GPIO1_BASE_ADDR;
-        else if (i==2)
-            addr=GPIO2_BASE_ADDR;
-        else
-            addr=GPIO3_BASE_ADDR;
-
-        if (simulated)
-            mem[i]=(volatile unsigned int *)malloc(len);
-        else {
-            mem[i]=(volatile unsigned int *)mmap(0,len,PROT_READ|PROT_WRITE,
-                                                MAP_SHARED,fd,addr);
-            // lets see if we have already exported a pin for the bank.
-            // int pin=32*i+1;
-            // // std::string filename;
-            // // filename.sprintf("/sys/class/gpio/gpio%d",pin);
-            // // QFile file(filename);
-            // std::stringstream filename;
-            // filename << "/sys/class/gpio/gpio%d" << pin;
-            // if (!file.exists()) {
-            //     // pin is not exported, so lets export it
-            //     // this is necessary to activate the GPIO module in the kernel
-            //     QFile exfile("/sys/class/gpio/export");
-            //     if (exfile.open(QFile::WriteOnly)) {
-            //         std::string data;
-            //         data.sprintf("%d\n",pin);
-            //         exfile.write(qPrintable(data));
-            //         exfile.close();
-            //     } else
-            //         qWarning("Failed to open '%s' for writing.",qPrintable(exfile.fileName()));
-            // }
+        if( i == 0 ) {
+            addr = GPIO0_BASE_ADDR;
+        } else if( i == 1 ) {
+            addr = GPIO1_BASE_ADDR;
+        } else if( i == 2 ) {
+            addr = GPIO2_BASE_ADDR;
+        } else {
+            addr = GPIO3_BASE_ADDR;
         }
-        Register::Init(regs[i],mem[i],len,NULL);
+
+        if( mSimulated ) {
+            mem[ i ] = (volatile unsigned int *)malloc( len );
+        } else {
+            mem[ i ] = (volatile unsigned int *)mmap( 0
+                                                      , len
+                                                      , PROT_READ | PROT_WRITE
+                                                      , MAP_SHARED
+                                                      , fd
+                                                      , addr );
+            /*
+            // lets see if we have already exported a pin for the bank.
+            int pin = 32 * i + 1;
+            // std::string filename;
+            // filename.sprintf("/sys/class/gpio/gpio%d",pin);
+            std::stringstream filename;
+            filename << "/sys/class/gpio/gpio%d" << pin;
+            QFile file(filename);
+            if( !file.exists() ) {
+                // pin is not exported, so lets export it
+                // this is necessary to activate the GPIO module in the kernel
+                QFile exfile("/sys/class/gpio/export");
+                if (exfile.open(QFile::WriteOnly)) {
+                    std::string data;
+                    data.sprintf("%d\n",pin);
+                    exfile.write(qPrintable(data));
+                    exfile.close();
+                } else
+                    qWarning("Failed to open '%s' for writing.",qPrintable(exfile.fileName()));
+            }
+            */
+        }
+        Register::Init( regs[ i ], mem[ i ], len, NULL );
     }
 }
 
-void GPIO::InitScript(Script *script)
-{
-    script->AddGlobal( "gpio", this );
-}
 
 void GPIO::AddRegs(int i)
 {
-    regs[i].push_back(new Register(GPIO::REVISION,     0x0000,"Revision"));
-    regs[i].push_back(new Register(GPIO::SYSCONFIG,    0x0010,"SysConfig"));
-    regs[i].push_back(new Register(GPIO::SYSSTATUS,    0x0114,"SysStatus"));
-    regs[i].push_back(new Register(GPIO::CTRL,         0x0130,"CTRL"));
-    regs[i].push_back(new Register(GPIO::OE,           0x0134,"OE"));
-    regs[i].push_back(new Register(GPIO::DATAIN,       0x0138,"DATAIN"));
-    regs[i].push_back(new Register(GPIO::DATAOUT,      0x013C,"DATAOUT"));
-    regs[i].push_back(new Register(GPIO::CLR_DATAOUT,  0x0190,"CLRDATAOUT"));
-    regs[i].push_back(new Register(GPIO::SET_DATAOUT,  0x0194,"SETDATAOUT"));
+    regs[ i ].push_back( new Register( REVISION,     0x0000, "Revision" ) );
+    regs[ i ].push_back( new Register( SYSCONFIG,    0x0010, "SysConfig" ) );
+    regs[ i ].push_back( new Register( SYSSTATUS,    0x0114, "SysStatus" ) );
+    regs[ i ].push_back( new Register( CTRL,         0x0130, "CTRL" ) );
+    regs[ i ].push_back( new Register( OE,           0x0134, "OE" ) );
+    regs[ i ].push_back( new Register( DATAIN,       0x0138, "DATAIN" ) );
+    regs[ i ].push_back( new Register( DATAOUT,      0x013C, "DATAOUT" ) );
+    regs[ i ].push_back( new Register( CLR_DATAOUT,  0x0190, "CLRDATAOUT" ) );
+    regs[ i ].push_back( new Register( SET_DATAOUT,  0x0194, "SETDATAOUT" ) );
 }
 
 uint32_t GPIO::Read(Register *reg)

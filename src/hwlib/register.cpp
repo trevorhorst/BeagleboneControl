@@ -37,18 +37,20 @@ std::string Register::Dump(bool displayZero)
     std::string output;
     if (Width()==W16) {
         uint16_t val=Read16();
-        if (val!=0 || displayZero);
+        if( val != 0 || displayZero ) {
             // output = name + "(" + std::string(int(offset)) + "):"
             //         + std::string(int(val));
             // output.sprintf("%24s(0x%04x): 0x%04X\n",
             //                qPrintable(name),offset,val);
+        }
     } else {
         uint32_t val=Read();
-        if (val!=0 || displayZero);
+        if( val != 0 || displayZero ) {
             // output = name + "(" + std::string(int(offset)) + "):"
             //         + std::string(int(val));
             // output.sprintf("%24s(0x%04x): 0x%08X\n",
             //                qPrintable(name),offset,val);
+        }
     }
     return output;
 }
@@ -69,24 +71,26 @@ std::string Register::Dump(RegisterList &list, int start, int stop)
     return output;
 }
 
-Register *Register::Find(int id,RegisterList &list)
+Register *Register::Find( uint32_t id,RegisterList &list )
 {
     // for registers that the id matches
     // the index in the list, then we can lookup
     // the register quickly
-    if (id>=0 && id<list.size()) {
-        Register *reg=list.at(id);
-        if (reg && reg->Id()==id)
+    if( id < list.size() ) {
+        Register *reg = list.at( id );
+        if( reg && reg->Id() == id ) {
             return reg;
+        }
     }
     // okay using the offset into the array didn't work
     // so now we have to do a search
-    for (int i=0;i<list.size();i++) {
-        Register *reg=list.at(i);
-        if (reg && reg->Id()==id)
+    for( uint32_t i = 0; i < list.size(); i++ ) {
+        Register *reg = list.at( i );
+        if( reg && reg->Id() == id ) {
             return reg;
+        }
     }
-    qWarning("Register ID=%d not found. count=%d",id,list.size());
+    qWarning( "Register ID = %d not found. count = %d", id, (int)list.size() );
     return NULL;
 }
 
@@ -114,7 +118,7 @@ Register *Register::Find(int start,int stop,const std::string &name,RegisterList
 
 void Register::Init(RegisterList &list, volatile uint32_t *mem, size_t len, bool *verbose)
 {
-    for (int i=0;i<list.size();i++) {
+    for( uint32_t i = 0; i < list.size(); i++ ) {
         Register *reg=list.at(i);
         if (reg)
             reg->Init(mem,len,verbose);

@@ -8,13 +8,17 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <vector>
 
 #include "common/script.h"
 #include "common/debug.h"
 
 #include "hwlib/gpio.h"
-#include "hwlib/venus634lpx.h"
+#include "hwlib/clockmodule.h"
+#include "hwlib/led.h"
+
 #include "hwlib/ssd1306.h"
+// #include "hwlib/venus634lpx.h"
 
 class HwLib : public QObject
 {
@@ -23,8 +27,13 @@ public:
     explicit HwLib( QObject *parent = 0 );
     ~HwLib();
 
-    void InitScript( Script *script );
-    void InitDebug( Debug *debug );
+    static bool mVerbose;
+    static bool IsVerbose(){ return mVerbose; }
+    static void SetVerbose( bool verbose ){ mVerbose = verbose; }
+
+    GPIO* GetGpio();
+    ClockModule* GetClockModule();
+    Led* GetLed( uint32_t led );
 
 public slots:
     void Heartbeat();
@@ -38,14 +47,16 @@ private:
     int mFd;
 
     GPIO mGpio;
-    Venus634LPx mGps;
+    ClockModule mClockModule;
+    std::vector< Led* > mLeds;
+    // Led *mLeds[ 4 ];
+    // Venus634LPx mGps;
     SSD1306 mOled;
     // Serial mSerial;
     // Venus634LPx mGps;
 
     QTimer mHeartbeat;
     QThread *mGpsThread;
-
 };
 
 #endif // HWLIB_H

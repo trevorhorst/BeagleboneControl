@@ -63,10 +63,3 @@ void Console::Exit()
 {
     mDone = true;
 }
-
-void Console::Help()
-{
-    if( mScript != NULL ) {
-        mScript->Help();
-    }
-}

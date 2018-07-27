@@ -12,7 +12,7 @@ Script::Script()
     // setObjectName( "Script" );
 
     // Addinthe script to itself causes some serious issues.
-    AddGlobal( "script", this );
+    // AddGlobal( "script", this );
 }
 
 /** ****************************************************************************
@@ -62,11 +62,15 @@ bool Script::Evaluate( QString input )
         QString error;
         error.sprintf( "%s", qPrintable(
                            mScriptEngine.uncaughtException().toString() ) );
+        qDebug( "%s", qPrintable( error ) );
         return false;
     }
 
-    if( !result.isUndefined() && !result.isUndefined() )
-        qDebug( "Result: %s", qPrintable( result.toString() ) );
+    if( result.isUndefined() ) {
+        // Ignore this case for now
+    } else {
+        // qDebug( "Result: %s", qPrintable( result.toString() ) );
+    }
 
     return true;
 }
@@ -107,8 +111,9 @@ QString Script::ReplaceArguments( const QString &cmd, QStringList args )
         while( completeCmd.contains( "%" ) ) {
             QString param;
             // Remove arugments that have been accounted for
-            if( args.count() > 1 )
+            if( args.count() > 1 ) {
                 param = args.takeAt( 1 );
+            }
             // Replace specifiers with an argument
             completeCmd = completeCmd.arg( param );
         }
@@ -116,10 +121,11 @@ QString Script::ReplaceArguments( const QString &cmd, QStringList args )
     return completeCmd;
 }
 
-void Script::Help()
+bool Script::Help()
 {
     QMap< QString, Command* >::const_iterator iter;
     for( iter = mCommandList.begin(); iter != mCommandList.end(); iter++ ) {
         qDebug( "%s", qPrintable( iter.value()->mName ) );
     }
+    return true;
 }

@@ -59,6 +59,11 @@ module.exports = {
             {
                 test: /\.png/,
                 loader: "url-loader?limit=10000&mimetype=image/png"
+            },
+            {
+                test: /\.js$/,
+                loader: 'babel-loader',
+                exclude: /node_modules/
             }
         ]
     },

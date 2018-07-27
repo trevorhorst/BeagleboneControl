@@ -5,22 +5,28 @@
 #define TESTSERVER_H
 
 #include <QObject>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QByteArray>
+#include <QVariantMap>
 
 #include <sys/types.h>
-#ifndef _WIN32
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#else
-#include <winsock2.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <microhttpd.h>
 
+#include <QThread>
+#include <QList>
 #include <QFile>
 #include <QHostAddress>
+
+#include "server/request.h"
+#include "server/commandhandler.h"
+#include "server/cmdled.h"
 
 #define PORT            8888
 #define POSTBUFFERSIZE  512
@@ -28,8 +34,6 @@
 
 #define GET             0
 #define POST            1
-
-static unsigned int nr_of_uploading_clients = 0;
 
 struct ConnectionInfo
 {
@@ -41,18 +45,12 @@ struct ConnectionInfo
 };
 
 
-static const char *busypage =
-  "<html><body>This server is busy, please try again later.</body></html>";
-
-static const char *completepage =
-  "<html><body>The upload has been completed.</body></html>";
-
 static const char *errorpage =
   "<html><body>This doesn't seem to be right.</body></html>";
-static const char *servererrorpage =
-  "<html><body>An internal server error has occured.</body></html>";
-static const char *fileexistspage =
-  "<html><body>This file already exists.</body></html>";
+
+#define PAGE "<html><head><title>libmicrohttpd demo</title>"\
+             "</head><body>libmicrohttpd demo!!</body></html>"
+
 
 class HttpServer : public QObject
 {
@@ -61,9 +59,13 @@ public:
     static bool IsVerbose(){ return mVerbose; }
     static void SetVerbose( bool verbose = true ) { mVerbose = verbose; }
 
-    explicit HttpServer( QObject *parent = 0 );
+    explicit HttpServer( uint32_t port = 8000, QObject *parent = 0 );
     ~HttpServer();
     static bool LoadFile( const QString &file, QString &buffer );
+
+    bool LoadFileToBuffer(const char *filename, char* buffer );
+    char* ReadFile( const char *filename );
+
     static int SendPage(MHD_Connection *connection
             , std::string page
             , int status_code , std::string page_type = "text/html");
@@ -82,51 +84,60 @@ public:
             , MHD_Connection *connection
             , void **con_cls
             , MHD_RequestTerminationCode toe );
-    static int AnswerToConnection (
-            void *cls
-            , struct MHD_Connection *connection
-            , const char *url, const char *method
-            , const char *version, const char *upload_data
-            , size_t *upload_data_size
-            , void **con_cls );
+    // static int AnswerToConnection (
+    //         void *cls
+    //         , struct MHD_Connection *connection
+    //         , const char *url, const char *method
+    //         , const char *version, const char *upload_data
+    //         , size_t *upload_data_size
+    //         , void **con_cls );
 
-    static int PrintOutKey(
+    static int HeaderValuesIterator(
             void *cls
             , enum MHD_ValueKind kind
             , const char *key
-            , const char *value)
-    {
-        (void)( cls );
-        (void)( kind );
-        printf( "%s: %s\n", key, value );
-        return MHD_YES;
-    }
+            , const char *value);
 
-
-    static bool SetBundleFile( QString file );
-    static bool SetIndexFile( QString file );
-    static bool SetStyleFile( QString file );
+    // static void OnResponseSent( void *cls, MHD_Connection *connection
+    //                             , void **request, MHD_RequestTerminationCode *rtc );
 
     static bool SetServerKey( QString file );
     static bool SetServerCrt( QString file );
 
-    void SetSecure( bool secure = true ) { mSecure = secure; }
     bool SetInterface( QString interface );
 
+    int OnRequest(MHD_Connection *connection
+            , const char *method
+            , const char *path
+            , void **request );
+
+    int OnRequestBody(Request *request
+            , const char *data
+            , size_t *size );
+
+    int OnRequestDone(
+            Request *request );
+
+    QVariantMap ParseJson( QString data );
+    void SetCommandHandler( CommandHandler *cmdHndlr );
+
 signals:
+    void RequestReady( Request *request );
 public slots:
     bool Start();
     void Stop();
     bool IsRunning();
+    void ProcessRequest( Request *request );
+    void SetSecure( bool secure = true );
 
 private:
     static bool mVerbose;
-    static bool mSecure;
+    bool mSecure;
 
     static const QString DEFAULT_ASSETS_DIR;
-    static const QString DEFAULT_INDEX_FILE;
-    static const QString DEFAULT_BUNDLE_FILE;
-    static const QString DEFAULT_STYLE_FILE;
+    static const char DEFAULT_INDEX_FILE[];
+    static const char DEFAULT_BUNDLE_FILE[];
+    static const char DEFAULT_STYLE_FILE[];
 
     static const QString DEFAULT_SSL_CERTS_DIR;
     static const QString DEFAULT_SERVER_KEY;
@@ -137,12 +148,17 @@ private:
     unsigned int mPort;
     QHostAddress mHostAddress;
     QString mInterface;
-    static std::string mIndexPage;
-    static std::string mBundlePage;
-    static std::string mStylePage;
     static std::string mTestPage;
     static std::string mServerKey;
     static std::string mServerCrt;
+
+    char* mStyleBuffer;
+    char* mBundleBuffer;
+    char* mIndexBuffer;
+
+    CommandHandler *mCommandHandler;
+
+    QThread mThread;
 };
 
 

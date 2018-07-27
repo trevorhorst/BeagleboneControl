@@ -40,3 +40,8 @@ int Request::SendResponse(
 
     return ret;
 }
+
+const char* Request::GetBody()
+{
+    return mBody.toLatin1().data();
+}
